@@ -20,9 +20,11 @@ class Channels extends React.Component {
         modal: false,
         channelsRef: firebase.database().ref('channels'),
         messagesRef: firebase.database().ref('messages'),
+        typingRef: firebase.database().ref('typing'),
         notifications: [],
         currentUser: this.props.currentUser,
-        firstLoad: true
+        firstLoad: true,
+
     }
 
     componentDidMount() {
@@ -32,6 +34,9 @@ class Channels extends React.Component {
 
     componentWillUnmount() {
         this.removeListeners()
+        this.state.channels.forEach(channel => {
+            this.state.messagesRef.child(channel.id).off()
+        })
     }
 
     addListeners = () => {
@@ -108,6 +113,10 @@ class Channels extends React.Component {
 
     removeListeners = () => {
         this.state.channelsRef.off()
+
+        this.state.channels.forEach(channel => {
+            this.state.messagesRef.child(channel.id).off()
+        })
     }
 
     openModalHandler = () => {
@@ -198,6 +207,10 @@ class Channels extends React.Component {
 
     changeChannel = (channel) => {
         this.setActiveChannel(channel)
+        this.state.typingRef
+            .child(this.state.channel.id)
+            .child(this.state.currentUser.uid)
+            .remove()
         this.clearNotifications()
         this.props.setCurrentChannel(channel)
         this.props.setPrivateChannel(false)

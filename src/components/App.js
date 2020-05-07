@@ -28,7 +28,6 @@ const App = ({currentUser, currentChannel, isPrivateChannel, userPosts}) => {
                currentChannel={currentChannel}
                isPrivateChannel={isPrivateChannel}
                key={currentChannel && currentChannel.id}
-
            />
        </Grid.Column>
 
@@ -45,6 +44,7 @@ const App = ({currentUser, currentChannel, isPrivateChannel, userPosts}) => {
      </Grid>
   );
 };
+
 
 const mapStateToProps = (state) => ({
     currentUser: state.user.currentUser,

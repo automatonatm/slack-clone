@@ -11,7 +11,6 @@ const ProgressBar = ({uploadState, percentUploaded}) => {
                indicating
                size="medium"
                inverted
-
            />
        )
     );

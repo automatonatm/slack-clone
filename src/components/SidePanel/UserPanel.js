@@ -1,14 +1,92 @@
 import React, {Component} from 'react';
-import {Dropdown, Grid, Header, Icon, Image} from "semantic-ui-react";
+import {Button, Dropdown, Grid, Header, Icon, Image, Input, Modal} from "semantic-ui-react";
 import firebase from '../../config/firebase'
 
-
-
+import AvatarEditor from 'react-avatar-editor'
 
 class UserPanel extends Component {
 
     state = {
-        user: this.props.currentUser
+        user: this.props.currentUser,
+        modal: false,
+        previewImage: '',
+        croppedImage: '',
+        blob: '',
+        storageRef: firebase.storage().ref(),
+        usersRef: firebase.auth().currentUser,
+        userRef : firebase.database().ref('users'),
+        metadata: {
+            contentType: 'image/jpeg'
+        },
+        uploadedCroppedImage: ''
+    }
+
+    openModalHandler = () =>  this.setState({modal: true})
+
+    closeModalHandler = () =>  this.setState({modal: false})
+
+    changeAvatarHandler = (event) => {
+        const file  = event.target.files[0]
+        const reader = new FileReader()
+        if (file) {
+            console.log(reader.result)
+            reader.readAsDataURL(file)
+            reader.addEventListener('load', () => {
+                this.setState({previewImage: reader.result })
+            })
+        }
+
+
+    }
+
+    cropImageHandler = () => {
+        if(this.avatarEditor) {
+            this.avatarEditor.getImageScaledToCanvas().toBlob(blob => {
+                let imageUrl = URL.createObjectURL(blob)
+                this.setState({
+                    croppedImage: imageUrl,
+                    blob
+                })
+            })
+        }
+    }
+
+    avatarUploadHandler = () => {
+        const {storageRef, usersRef, blob, metadata} = this.state
+        storageRef
+            .child(`avatars/users/${usersRef.uid}`)
+            .put(blob, metadata )
+            .then(snap => {
+                snap.ref.getDownloadURL()
+                    .then(downloadUrl => {
+                        this.setState({uploadedCroppedImage:downloadUrl }, () => {
+                          this.changeAvatar()
+                        })
+                    })
+            })
+    }
+
+    changeAvatar = () => {
+        this.state.usersRef
+            .updateProfile({
+                photoURL: this.state.uploadedCroppedImage
+            })
+            .then(() => {
+                this.closeModalHandler()
+            })
+            .catch(error => {
+                console.log(error)
+            })
+
+        this.state.userRef
+            .child(this.state.user.uid)
+            .update({avatar: this.state.uploadedCroppedImage})
+            .then(() => {
+                console.log('User Avatar Uploaded')
+            })
+            .catch(error => {
+                console.log(error)
+            })
     }
 
     dropdownOptions = () => [
@@ -19,7 +97,7 @@ class UserPanel extends Component {
         },
         {
             key: "avatar",
-            text: <span>Change Avatar</span>
+            text: <span onClick={this.openModalHandler}>Change Avatar</span>
         },
 
         {
@@ -37,7 +115,7 @@ class UserPanel extends Component {
 
     render() {
 
-        const {user} = this.state
+        const {user , modal, previewImage, croppedImage, blob} = this.state
 
         return (
            <Grid style={{background: "#4c34c"}}>
@@ -59,6 +137,60 @@ class UserPanel extends Component {
                            </span>
                        } options={this.dropdownOptions()}/>
                    </Header>
+                 {/*Change user avatar modal*/}
+                 <Modal basic open={modal} onClose={this.closeModalHandler}>
+                     <Modal.Header>Change Avatar</Modal.Header>
+                     <Modal.Content>
+                         <Input
+                             fluid
+                             type="file"
+                             label="New Avatar"
+                             name="preview Image"
+                             onChange={this.changeAvatarHandler}
+                         />
+                         <Grid centered stackable columns={2}>
+                             <Grid.Row centered>
+                                 <Grid.Column className="ui center aligned grid">
+                                     {previewImage && (
+                                         <AvatarEditor
+                                             image={previewImage}
+                                             width={120}
+                                             height={120}
+                                             border={50}
+                                             scale={1.2}
+                                             ref={node => (this.avatarEditor = node)}
+                                         />
+                                     ) }
+                                 </Grid.Column>
+                                 <Grid.Column className="">
+                                     {croppedImage && (
+                                         <Image
+                                             style={{margin: '3.5em auto'}}
+                                             witdth={100}
+                                             height={100}
+                                             src={croppedImage}/>
+                                     )}
+                                 </Grid.Column>
+                             </Grid.Row>
+                         </Grid>
+                     </Modal.Content>
+                     <Modal.Actions>
+
+                         {croppedImage && (
+                             <Button color="green" inverted onClick={this.avatarUploadHandler}>
+                                 <Icon name="save"/> Change Avatar
+                             </Button>
+                         )}
+
+                         <Button color="green" inverted onClick={this.cropImageHandler}>
+                             <Icon name="save"/> Preview Avatar
+                         </Button>
+
+                         <Button color="red" inverted onClick={this.closeModalHandler}>
+                             <Icon name="remove"/> Cancel
+                         </Button>
+                     </Modal.Actions>
+                 </Modal>
                </Grid.Column>
            </Grid>
         );

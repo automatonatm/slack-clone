@@ -18,6 +18,14 @@ class ColorPanel extends Component {
         usersRef: firebase.database().ref('users')
     }
 
+    componentWillUnmount() {
+        this.removeListener()
+    }
+
+    removeListener = () => {
+        this.state.usersRef.child(`${this.state.user.uid}/colors`).off()
+    }
+
     openModalHandler = () => this.setState({modal: true})
 
     closeModalHandler = () => this.setState({modal: false})
